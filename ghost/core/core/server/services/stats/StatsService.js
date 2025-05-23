@@ -97,6 +97,52 @@ class StatsService {
     }
 
     /**
+     * Get newsletter stats for sent posts
+     * @param {Object} options
+     * @param {string} [options.newsletter_id] - ID of the specific newsletter to get stats for
+     * @param {string} [options.order='published_at desc'] - Order field and direction
+     * @param {number} [options.limit=20] - Max number of results to return
+     * @param {string} [options.date_from] - Start date filter in YYYY-MM-DD format
+     * @param {string} [options.date_to] - End date filter in YYYY-MM-DD format
+     * @returns {Promise<{data: Object[]}>}
+     */
+    async getNewsletterStats(options = {}) {
+        // Extract newsletter_id from options
+        const {newsletter_id: newsletterId, ...otherOptions} = options;
+        
+        // If no newsletterId is provided, we can't get specific stats
+        if (!newsletterId) {
+            return {data: []};
+        }
+        
+        // Return newsletter stats for the specific newsletter
+        const result = await this.posts.getNewsletterStats(newsletterId, otherOptions);
+        return result;
+    }
+
+    /**
+     * Get newsletter subscriber statistics including total count and daily deltas
+     * 
+     * @param {Object} options
+     * @param {string} [options.newsletter_id] - ID of the specific newsletter to get stats for
+     * @param {string} [options.date_from] - Start date filter in YYYY-MM-DD format
+     * @param {string} [options.date_to] - End date filter in YYYY-MM-DD format
+     * @returns {Promise<{data: Object}>}
+     */
+    async getNewsletterSubscriberStats(options = {}) {
+        // Extract newsletter_id from options
+        const {newsletter_id: newsletterId, ...otherOptions} = options;
+        
+        // If no newsletterId is provided, we can't get specific stats
+        if (!newsletterId) {
+            return {data: [{total: 0, deltas: []}]};
+        }
+        
+        const result = await this.posts.getNewsletterSubscriberStats(newsletterId, otherOptions);
+        return result;
+    }
+
+    /**
      * @param {object} deps
      *
      * @returns {StatsService}
