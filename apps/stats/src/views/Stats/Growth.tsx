@@ -1,21 +1,16 @@
-import CustomTooltipContent from '@src/components/chart/CustomTooltipContent';
+import AreaChart, {AreaChartDataItem} from './components/AreaChart';
 import DateRangeSelect from './components/DateRangeSelect';
-import PostMenu from './components/PostMenu';
 import React, {useMemo, useState} from 'react';
 import SortButton from './components/SortButton';
+import StatsHeader from './layout/StatsHeader';
 import StatsLayout from './layout/StatsLayout';
 import StatsView from './layout/StatsView';
-import {Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ChartConfig, ChartContainer, ChartTooltip, H1, KpiTabTrigger, KpiTabValue, Recharts, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsList, ViewHeader, ViewHeaderActions, formatDisplayDate, formatNumber} from '@tryghost/shade';
+import {Button, Card, CardContent, CardDescription, CardHeader, CardTitle, KpiTabTrigger, KpiTabValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsList, centsToDollars, formatNumber} from '@tryghost/shade';
 import {DiffDirection, useGrowthStats} from '@src/hooks/useGrowthStats';
-import {calculateYAxisWidth, getYRange, getYTicks, sanitizeChartData} from '@src/utils/chart-helpers';
+import {getPeriodText, sanitizeChartData} from '@src/utils/chart-helpers';
 import {useGlobalData} from '@src/providers/GlobalDataProvider';
 import {useNavigate} from '@tryghost/admin-x-framework';
 import {useTopPostsStatsWithRange} from '@src/hooks/useTopPostsStatsWithRange';
-
-// TODO: Move to @tryghost/shade
-const centsToDollars = (value: number) => {
-    return Math.round(value / 100);
-};
 
 type TopPostsOrder = 'free_members desc' | 'paid_members desc' | 'mrr desc';
 
@@ -86,7 +81,7 @@ const GrowthKPIs: React.FC<{
         sanitizedData = sanitizeChartData(allChartData, range, fieldName, 'exact');
 
         // Then map the sanitized data to the final format
-        let processedData: ChartDataItem[] = [];
+        let processedData: AreaChartDataItem[] = [];
 
         switch (currentTab) {
         case 'free-members':
@@ -125,11 +120,20 @@ const GrowthKPIs: React.FC<{
         return processedData;
     }, [currentTab, allChartData, range]);
 
-    const chartConfig = {
-        value: {
-            label: currentTab === 'mrr' ? 'MRR' : 'Members'
+    const tabConfig = {
+        'total-members': {
+            color: 'hsl(var(--chart-blue))'
+        },
+        'free-members': {
+            color: 'hsl(var(--chart-green))'
+        },
+        'paid-members': {
+            color: 'hsl(var(--chart-purple))'
+        },
+        mrr: {
+            color: 'hsl(var(--chart-orange))'
         }
-    } satisfies ChartConfig;
+    };
 
     return (
         <Tabs defaultValue="total-members" variant='kpis'>
@@ -138,6 +142,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('total-members');
                 }}>
                     <KpiTabValue
+                        color={tabConfig['total-members'].color}
                         diffDirection={directions.total}
                         diffValue={percentChanges.total}
                         label="Total members"
@@ -148,6 +153,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('free-members');
                 }}>
                     <KpiTabValue
+                        color={tabConfig['free-members'].color}
                         diffDirection={directions.free}
                         diffValue={percentChanges.free}
                         label="Free members"
@@ -158,6 +164,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('paid-members');
                 }}>
                     <KpiTabValue
+                        color={tabConfig['paid-members'].color}
                         diffDirection={directions.paid}
                         diffValue={percentChanges.paid}
                         label="Paid members"
@@ -168,6 +175,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('mrr');
                 }}>
                     <KpiTabValue
+                        color={tabConfig.mrr.color}
                         diffDirection={directions.mrr}
                         diffValue={percentChanges.mrr}
                         label="MRR"
@@ -176,71 +184,20 @@ const GrowthKPIs: React.FC<{
                 </KpiTabTrigger>
             </TabsList>
             <div className='my-4 [&_.recharts-cartesian-axis-tick-value]:fill-gray-500'>
-                <ChartContainer className='-mb-3 h-[16vw] max-h-[320px] w-full' config={chartConfig}>
-                    <Recharts.LineChart
-                        data={chartData}
-                        margin={{
-                            left: 0,
-                            right: 20,
-                            top: 12
-                        }}
-                        accessibilityLayer
-                    >
-                        <Recharts.CartesianGrid horizontal={false} vertical={false} />
-                        <Recharts.XAxis
-                            axisLine={{stroke: 'hsl(var(--border))', strokeWidth: 1}}
-                            dataKey="date"
-                            interval={0}
-                            stroke="hsl(var(--gray-300))"
-                            tickFormatter={formatDisplayDate}
-                            tickLine={false}
-                            tickMargin={8}
-                            ticks={chartData.length > 0 ? [chartData[0].date, chartData[chartData.length - 1].date] : []}
-                        />
-                        <Recharts.YAxis
-                            axisLine={false}
-                            domain={[getYRange(chartData).min, getYRange(chartData).max]}
-                            tickFormatter={(value) => {
-                                switch (currentTab) {
-                                case 'total-members':
-                                case 'free-members':
-                                case 'paid-members':
-                                    return formatNumber(value);
-                                case 'mrr':
-                                    return `$${value}`;
-                                default:
-                                    return value.toLocaleString();
-                                }
-                            }}
-                            tickLine={false}
-                            ticks={getYTicks(chartData)}
-                            width={calculateYAxisWidth(getYTicks(chartData), (value) => {
-                                switch (currentTab) {
-                                case 'total-members':
-                                case 'free-members':
-                                case 'paid-members':
-                                    return formatNumber(value);
-                                case 'mrr':
-                                    return `$${value}`;
-                                default:
-                                    return value.toLocaleString();
-                                }
-                            })}
-                        />
-                        <ChartTooltip
-                            content={<CustomTooltipContent range={range} />}
-                            cursor={true}
-                        />
-                        <Recharts.Line
-                            dataKey="value"
-                            dot={false}
-                            isAnimationActive={false}
-                            stroke="hsl(var(--chart-1))"
-                            strokeWidth={2}
-                            type='monotone'
-                        />
-                    </Recharts.LineChart>
-                </ChartContainer>
+                <AreaChart
+                    allowDataOverflow={true}
+                    className='-mb-3 h-[16vw] max-h-[320px] w-full'
+                    color={tabConfig[currentTab as keyof typeof tabConfig].color}
+                    data={chartData}
+                    dataFormatter={currentTab === 'mrr'
+                        ?
+                        (value: number) => {
+                            return `$${formatNumber(value)}`;
+                        } :
+                        formatNumber}
+                    id="mrr"
+                    range={range}
+                />
             </div>
         </Tabs>
     );
@@ -260,12 +217,9 @@ const Growth: React.FC = () => {
 
     return (
         <StatsLayout>
-            <ViewHeader className='before:hidden'>
-                <H1>Growth</H1>
-                <ViewHeaderActions>
-                    <DateRangeSelect />
-                </ViewHeaderActions>
-            </ViewHeader>
+            <StatsHeader>
+                <DateRangeSelect />
+            </StatsHeader>
             <StatsView data={chartData} isLoading={isLoading}>
                 <Card>
                     <CardContent>
@@ -275,7 +229,7 @@ const Growth: React.FC = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Top performing posts</CardTitle>
-                        <CardDescription>Which posts drove the most growth</CardDescription>
+                        <CardDescription>Which posts drove the most growth {getPeriodText(range)}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Separator/>
@@ -297,10 +251,9 @@ const Growth: React.FC = () => {
                                     </TableHead>
                                     <TableHead className='text-right'>
                                         <SortButton activeSortBy={sortBy} setSortBy={setSortBy} sortBy='mrr desc'>
-                                            MRR
+                                            MRR impact
                                         </SortButton>
                                     </TableHead>
-                                    <TableHead className='w-[32px] text-right'></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -310,7 +263,7 @@ const Growth: React.FC = () => {
                                             <div className='group/link inline-flex items-center gap-2'>
                                                 {post.post_id ?
                                                     <Button className='h-auto whitespace-normal p-0 text-left hover:!underline' title="View post analytics" variant='link' onClick={() => {
-                                                        navigate(`/posts/analytics/${post.post_id}`, {crossApp: true});
+                                                        navigate(`/posts/analytics/beta/${post.post_id}`, {crossApp: true});
                                                     }}>
                                                         {post.title}
                                                     </Button>
@@ -324,18 +277,15 @@ const Growth: React.FC = () => {
                                                 </a> */}
                                             </div>
                                         </TableCell>
-                                        <TableCell className={`text-right font-mono text-sm ${post.free_members === 0 && 'text-gray-700'}`}>
+                                        <TableCell className='text-right font-mono text-sm'>
                                             {(post.free_members > 0 && '+')}{formatNumber(post.free_members)}
                                         </TableCell>
-                                        <TableCell className={`text-right font-mono text-sm ${post.paid_members === 0 && 'text-gray-700'}`}>
+                                        <TableCell className='text-right font-mono text-sm'>
                                             {(post.paid_members > 0 && '+')}{formatNumber(post.paid_members)}
                                         </TableCell>
-                                        <TableCell className={`text-right font-mono text-sm ${post.mrr === 0 && 'text-gray-700'}`}>
+                                        <TableCell className='text-right font-mono text-sm'>
                                             {/* TODO: Update to use actual currency */}
                                             {(post.mrr > 0 && '+')}${(post.mrr / 100).toFixed(0)}
-                                        </TableCell>
-                                        <TableCell className='text-right text-gray-700 hover:text-black'>
-                                            <PostMenu pathName='' postId={post.post_id} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
