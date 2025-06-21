@@ -3,6 +3,7 @@ import Error from '@components/layout/Error';
 import Explore from '@views/Explore';
 import Feed from './views/Feed/Feed';
 import Inbox from '@views/Inbox';
+import Moderation from '@views/Preferences/components/Moderation';
 import Note from './views/Feed/Note';
 import Notifications from '@views/Notifications';
 import Onboarding from '@components/layout/Onboarding';
@@ -11,7 +12,6 @@ import OnboardingStep2 from '@components/layout/Onboarding/Step2';
 import OnboardingStep3 from '@components/layout/Onboarding/Step3';
 import Preferences from '@views/Preferences';
 import Profile from '@views/Profile';
-import ThreadsSharing from '@views/Preferences/components/ThreadsSharing';
 import {Navigate, RouteObject} from '@tryghost/admin-x-framework';
 
 export const APP_ROUTE_PREFIX = '/activitypub';
@@ -78,8 +78,9 @@ export const routes: CustomRouteObject[] = [
                 pageTitle: 'Preferences'
             },
             {
-                path: 'preferences/threads-sharing',
-                element: <ThreadsSharing />,
+                path: 'preferences/moderation',
+                element: <Moderation />,
+                pageTitle: 'Moderation',
                 showBackButton: true
             },
             {
